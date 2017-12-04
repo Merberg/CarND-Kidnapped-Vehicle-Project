@@ -107,6 +107,9 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
   weights.clear();
   for (auto &particle : particles) {
+    //Reset the weight
+    particle.weight = 1;
+
     for (auto &obsVehicle : observations) {
       LandmarkObs obsMap;
 
@@ -118,11 +121,11 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
       //Find the closest landmark
       dataAssociation(sensor_range, obsMap, map_landmarks);
+      int landmarkIndex = obsMap.id - 1;
+      double mu_x = map_landmarks.landmark_list[landmarkIndex].x_f;
+      double mu_y = map_landmarks.landmark_list[landmarkIndex].y_f;
 
       //Calculate weight
-      double mu_x = map_landmarks.landmark_list[obsMap.id].x_f;
-      double mu_y = map_landmarks.landmark_list[obsMap.id].y_f;
-
       double gauss_norm = (1 / (2 * PI * sig_x * sig_y));
       double exponent = pow((obsMap.x - mu_x), 2) / (2 * sig_x_sqr)
           + pow((obsMap.y - mu_y), 2) / (2 * sig_y_sqr);
@@ -135,17 +138,15 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 void ParticleFilter::resample()
 {
 // Resample particles with replacement with probability proportional to their weight.
-//  std::vector<Particle> resampled;
-//  random_device rd;
-//  mt19937 gen(rd());
-//  discrete_distribution<> d(weights.begin(), weights.end());
-//  for (int i=0; i<num_particles; i++)
-//  {
-//    Particle p = particles[d(gen)];
-//    resampled.push_back(p);
-//  }
-//  particles = resampled;
-//  is_initialized = false;
+  std::vector<Particle> resampled;
+  default_random_engine gen;
+  discrete_distribution<> d(weights.begin(), weights.end());
+  for (int i = 0; i < num_particles; i++) {
+    Particle p = particles[d(gen)];
+    resampled.push_back(p);
+  }
+  particles = resampled;
+  is_initialized = false;
 }
 
 Particle ParticleFilter::SetAssociations(Particle& particle,
