@@ -27,7 +27,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[])
   normal_distribution<double> dist_theta(theta, std[2]);
 
   //Set the number of particles.
-  num_particles = 50;
+  num_particles = 80;
 
   //Initialize all particles based on GPS estimates with random Gaussian noise
   default_random_engine gen;
