@@ -18,9 +18,9 @@ This repository contains the code needed to complete the final project for the L
 ## Basic Build Instructions
 Scripts have been included to streamline the build process, these can be leveraged by executing the following in the top directory of the project:
 
-./clean.sh
-./build.sh
-./run.sh
+1. ./clean.sh
+2. ./build.sh
+3. ./run.sh
 
 ## Inputs to the Particle Filter
 The inputs to the particle filter are in the `data` directory. 
