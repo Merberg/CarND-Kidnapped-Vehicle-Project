@@ -22,21 +22,23 @@ using namespace std;
 void ParticleFilter::init(double x, double y, double theta, double std[])
 {
   //Create Gaussian distributions for the GPS x, y, and theta using their standard deviations
-  normal_distribution<double> dist_x(x, std[0]);
-  normal_distribution<double> dist_y(y, std[1]);
-  normal_distribution<double> dist_theta(theta, std[2]);
+  random_device seed;
+  mt19937 gen(seed());
+  normal_distribution<double> noise_x(x, std[0]);
+  normal_distribution<double> noise_y(y, std[1]);
+  normal_distribution<double> noise_theta(theta, std[2]);
 
   //Set the number of particles.
-  num_particles = 80;
+  num_particles = 10;
 
   //Initialize all particles based on GPS estimates with random Gaussian noise
-  default_random_engine gen;
+  cout << "GPS x:" << x << "\ty:" << y << "\ttheta:" << theta << endl;
   for (int i = 0; i < num_particles; i++) {
     Particle p;
     p.id = i;
-    p.x = dist_x(gen);
-    p.y = dist_y(gen);
-    p.theta = dist_theta(gen);
+    p.x = noise_x(gen);
+    p.y = noise_y(gen);
+    p.theta = noise_theta(gen);
     p.weight = 1;
     particles.push_back(p);
   }
@@ -47,32 +49,32 @@ void ParticleFilter::init(double x, double y, double theta, double std[])
 void ParticleFilter::prediction(double delta_t, double std_pos[],
                                 double velocity, double yaw_rate)
 {
-  // Add measurements to each particle and add random Gaussian noise.
-  default_random_engine gen;
-  double x = 0;
-  double y = 0;
+  // Add measurements to each particle and add random Gaussian noise
+  random_device seed;
+  mt19937 gen(seed());
   double theta_d = delta_t * yaw_rate;
   double vt = (fabs(yaw_rate) > 0.001) ? velocity / theta_d : 0;
+  normal_distribution<double> noise_x(0, std_pos[0]);
+  normal_distribution<double> noise_y(0, std_pos[1]);
+  normal_distribution<double> noise_theta(0, std_pos[2]);
 
   for (auto &particle : particles) {
+    cout << "*x:" << particle.x << "\t" << particle.y << "\t" << particle.theta
+         << endl;
     if (fabs(yaw_rate) > 0.001) {
-      x = particle.x
-          + vt * (sin(particle.theta + theta_d) - sin(particle.theta));
-      y = particle.y
-          + vt * (cos(particle.theta - cos(particle.theta + theta_d)));
+      particle.x += vt * (sin(particle.theta + theta_d) - sin(particle.theta));
+      particle.y += vt * (cos(particle.theta) - cos(particle.theta + theta_d));
     } else {
-      x = particle.x + velocity * cos(particle.theta) * delta_t;
-      y = particle.y + velocity * sin(particle.theta) * delta_t;
+      particle.x += velocity * cos(particle.theta) * delta_t;
+      particle.y += velocity * sin(particle.theta) * delta_t;
     }
-    normal_distribution<double> dist_x(x, std_pos[0]);
-    particle.x = dist_x(gen);
+    particle.x += noise_x(gen);
+    particle.y += noise_y(gen);
+    particle.theta += theta_d + noise_theta(gen);
 
-    normal_distribution<double> dist_y(y, std_pos[1]);
-    particle.y = dist_y(gen);
-
-    double theta = particle.theta + theta_d;
-    normal_distribution<double> dist_theta(theta, std_pos[2]);
-    particle.theta = dist_theta(gen);
+    cout << " x:" << particle.x << "\t" << particle.y << "\t" << particle.theta
+         << endl;
+    cout << endl;
   }
 }
 
@@ -99,38 +101,55 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
                                    const Map &map_landmarks)
 {
   // Update the weights of each particle using a mult-variate Gaussian distribution.
+  static const double WEIGHT_MIN = 1e-8;
   const double PI = 4 * atan(1);
   double sig_x = std_landmark[0];
   double sig_x_sqr = pow(sig_x, 2);
   double sig_y = std_landmark[1];
   double sig_y_sqr = pow(sig_y, 2);
+  double gauss_norm = (1 / (2 * PI * sig_x * sig_y));
 
   weights.clear();
   for (auto &particle : particles) {
     //Reset the weight
     particle.weight = 1;
+    particle.associations.clear();
+    particle.sense_x.clear();
+    particle.sense_y.clear();
 
     for (auto &obsVehicle : observations) {
       LandmarkObs obsMap;
 
       //Translate to map coordinates
+      obsMap.id = 0;
       obsMap.x = particle.x + obsVehicle.x * cos(particle.theta)
           - obsVehicle.y * sin(particle.theta);
       obsMap.y = particle.y + obsVehicle.x * sin(particle.theta)
           + obsVehicle.y * cos(particle.theta);
 
-      //Find the closest landmark
+      //Find the closest landmark and update weight
       dataAssociation(sensor_range, obsMap, map_landmarks);
-      int landmarkIndex = obsMap.id - 1;
-      double mu_x = map_landmarks.landmark_list[landmarkIndex].x_f;
-      double mu_y = map_landmarks.landmark_list[landmarkIndex].y_f;
+      if (obsMap.id != 0) {
+        int landmarkIndex = obsMap.id - 1;
+        double mu_x = map_landmarks.landmark_list[landmarkIndex].x_f;
+        double mu_y = map_landmarks.landmark_list[landmarkIndex].y_f;
 
-      //Calculate weight
-      double gauss_norm = (1 / (2 * PI * sig_x * sig_y));
-      double exponent = pow((obsMap.x - mu_x), 2) / (2 * sig_x_sqr)
-          + pow((obsMap.y - mu_y), 2) / (2 * sig_y_sqr);
-      particle.weight *= gauss_norm * exp(-exponent);
+        //Calculate weight
+        double exponent = pow((obsMap.x - mu_x), 2) / (2 * sig_x_sqr)
+            + pow((obsMap.y - mu_y), 2) / (2 * sig_y_sqr);
+        double weight = gauss_norm * exp(-exponent);
+        particle.weight *= (weight < WEIGHT_MIN) ? WEIGHT_MIN : weight;
+
+        particle.associations.push_back(obsMap.id);
+        particle.sense_x.push_back(obsMap.x);
+        particle.sense_y.push_back(obsMap.y);
+      } else {
+        particle.weight *= WEIGHT_MIN;
+      }
     }
+    cout << "Final:" << particle.id << " Px:" << particle.x << "\tPy:"
+         << particle.y << "\tW:" << particle.weight << endl;
+    cout << endl;
     weights.push_back(particle.weight);
   }
 }
@@ -138,15 +157,17 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 void ParticleFilter::resample()
 {
 // Resample particles with replacement with probability proportional to their weight.
-  std::vector<Particle> resampled;
-  default_random_engine gen;
+  vector<Particle> resampled;
+  random_device seed;
+  mt19937 gen(seed());
   discrete_distribution<> d(weights.begin(), weights.end());
   for (int i = 0; i < num_particles; i++) {
     Particle p = particles[d(gen)];
+    cout << p.id << " Px:" << p.x << "\tPy:" << p.y << "\tW:" << p.weight
+         << endl;
     resampled.push_back(p);
   }
   particles = resampled;
-  is_initialized = false;
 }
 
 Particle ParticleFilter::SetAssociations(Particle& particle,
