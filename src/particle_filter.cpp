@@ -29,10 +29,9 @@ void ParticleFilter::init(double x, double y, double theta, double std[])
   normal_distribution<double> noise_theta(theta, std[2]);
 
   //Set the number of particles.
-  num_particles = 10;
+  num_particles = 20;
 
   //Initialize all particles based on GPS estimates with random Gaussian noise
-  cout << "GPS x:" << x << "\ty:" << y << "\ttheta:" << theta << endl;
   for (int i = 0; i < num_particles; i++) {
     Particle p;
     p.id = i;
@@ -104,12 +103,12 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
   vector<double> particle_weights;
 
   weights.clear();
-  cout << observations.size() << " Observations" << endl;
   for (int i = 0; i < num_particles; i++) {
     auto &particle = particles[i];
 
     //Reset the particle
-    cout << particle.id << "->" << i << endl;
+    if (debug_printing)
+      cout << particle.id << "->" << i << endl;
     particle.id = i;
     particle.weight = 1;
     particle.associations.clear();
@@ -146,13 +145,15 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
         particle.weight_calc.push_back(weight);
       }
     }
-    cout << " Px:" << particle.x << "\tPy:" << particle.y << "\tW:"
-         << particle.weight << endl;
-    cout << " IDs:\t" << getAssociations(particle) << endl;
-    cout << " x:\t" << getSenseX(particle) << endl;
-    cout << " y:\t" << getSenseY(particle) << endl;
-    cout << " w:\t" << getWeightCalculations(particle) << endl;
-    cout << endl;
+    if (debug_printing) {
+      cout << " Px:" << particle.x << "\tPy:" << particle.y << "\tW:"
+           << particle.weight << endl;
+      cout << " IDs:\t" << getAssociations(particle) << endl;
+      cout << " x:\t" << getSenseX(particle) << endl;
+      cout << " y:\t" << getSenseY(particle) << endl;
+      cout << " w:\t" << getWeightCalculations(particle) << endl;
+      cout << endl;
+    }
     weights.push_back(particle.weight);
   }
 }

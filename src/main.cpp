@@ -45,9 +45,8 @@ int main()
 
   // Create particle filter
   ParticleFilter pf(1);
-  int debugCounter = 0;
 
-#define UNIT_TESTS
+//#define UNIT_TESTS
 #ifdef UNIT_TESTS
   const double PI = 4 * atan(1);
   Particle p;
@@ -97,7 +96,7 @@ int main()
 #endif
 
   h.onMessage(
-      [&debugCounter,&pf,&map,&delta_t,&sensor_range,&sigma_pos,&sigma_landmark](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+      [&pf,&map,&delta_t,&sensor_range,&sigma_pos,&sigma_landmark](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
         // "42" at the start of the message means there's a websocket message event.
         // The 4 signifies a websocket message
         // The 2 signifies a websocket event
@@ -178,11 +177,6 @@ int main()
               }
               cout << "highest w " << highest_weight << endl;
               cout << "average w " << weight_sum/num_particles << endl;
-              debugCounter++;
-              if (debugCounter == 6 || ((highest_weight == 1) && (weight_sum/num_particles == 1)))
-              {
-                exit(0);
-              }
 
               json msgJson;
               msgJson["best_particle_x"] = best_particle.x;
