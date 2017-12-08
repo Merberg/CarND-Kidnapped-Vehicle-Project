@@ -47,7 +47,7 @@ int main()
   ParticleFilter pf(1);
 
   // Testing of the updateWeights method
-#define UNIT_TEST_UPDATE_WEIGHTS
+//#define UNIT_TEST_UPDATE_WEIGHTS
 #ifdef UNIT_TEST_UPDATE_WEIGHTS
   Particle p;
   p.id = 1;

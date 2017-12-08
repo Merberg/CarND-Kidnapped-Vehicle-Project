@@ -101,7 +101,6 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
                                    const Map &map_landmarks)
 {
   // Update the weights of each particle using a mult-variate Gaussian distribution.
-  static const double WEIGHT_MIN = 1e-8;
   const double PI = 4 * atan(1);
   double sig_x = std_landmark[0];
   double sig_x_sqr = pow(sig_x, 2);
@@ -138,7 +137,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
         double exponent = pow((obsMap.x - mu_x), 2) / (2 * sig_x_sqr)
             + pow((obsMap.y - mu_y), 2) / (2 * sig_y_sqr);
         double weight = gauss_norm * exp(-exponent);
-        particle.weight *= (weight < WEIGHT_MIN) ? WEIGHT_MIN : weight;
+        cout << obsVehicle.id << " weight:" << weight << endl;
+        particle.weight *= weight;
 
         particle.associations.push_back(obsMap.id);
         particle.sense_x.push_back(obsMap.x);
