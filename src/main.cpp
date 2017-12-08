@@ -45,43 +45,59 @@ int main()
 
   // Create particle filter
   ParticleFilter pf(1);
+  int debugCounter = 0;
+
+#define UNIT_TESTS
+#ifdef UNIT_TESTS
+  const double PI = 4 * atan(1);
+  Particle p;
+  double std_pos[] = { 0, 0 };
+  p.id = 1;
+
+  // Testing prediction
+  p.x = 102;
+  p.y = 65;
+  p.theta = 5 * PI / 8;
+  pf.particles.push_back(p);
+  pf.prediction(0.1, std_pos, 110, PI / 8);
+
+  p = pf.particles[0];
+  cout << "Expected (x,y,theta): (97.59,75.08,2.0028) vs (" << p.x << "," << p.y
+       << "," << p.theta << ")" << endl;
 
   // Testing of the updateWeights method
-//#define UNIT_TEST_UPDATE_WEIGHTS
-#ifdef UNIT_TEST_UPDATE_WEIGHTS
-  Particle p;
-  p.id = 1;
+  pf.particles.clear();
   p.x = 4;
   p.y = 5;
-  p.theta = -2 * atan(1);;
+  p.theta = -2 * atan(1);
   p.weight = 1;
   pf.particles.push_back(p);
 
   double std_landmark[] = {.3,.3};
   vector<LandmarkObs> observations;
-  observations.push_back({1,2,2});
-  observations.push_back({2,3,-2});
-  observations.push_back({3,0,-4});
+  observations.push_back( { 1, 2, 2 });
+  observations.push_back( { 2, 3, -2 });
+  observations.push_back( { 3, 0, -4 });
   Map map_landmarks;
-  map_landmarks.landmark_list.push_back({1,5,3});
-  map_landmarks.landmark_list.push_back({2,2,1});
-  map_landmarks.landmark_list.push_back({3,6,1});
-  map_landmarks.landmark_list.push_back({4,7,4});
-  map_landmarks.landmark_list.push_back({5,4,7});
+  map_landmarks.landmark_list.push_back( { 1, 5, 3 });
+  map_landmarks.landmark_list.push_back( { 2, 2, 1 });
+  map_landmarks.landmark_list.push_back( { 3, 6, 1 });
+  map_landmarks.landmark_list.push_back( { 4, 7, 4 });
+  map_landmarks.landmark_list.push_back( { 5, 4, 7 });
 
-  pf.updateWeights(50,std_landmark,observations,map_landmarks);
+  pf.updateWeights(50, std_landmark, observations, map_landmarks);
 
   p = pf.particles[0];
-  cout << "Associations Expected:1 2 2 or 5 vs Actual:" << pf.getAssociations(p) << endl;
-  cout << "Sense X Expected:6 2 0 vs Actual:" << pf.getSenseX(p) << endl;
-  cout << "Sense Y Expected:3 2 5 vs Actual:" << pf.getSenseY(p) << endl;
-  cout << "Weight Expected: 4.60e-53 vs Actual:" << p.weight << endl;
+  cout << "Associations Expected:1 2 2 or 5 vs " << pf.getAssociations(p)
+       << endl;
+  cout << "Sense X Expected:6 2 0 vs " << pf.getSenseX(p) << endl;
+  cout << "Sense Y Expected:3 2 5 vs " << pf.getSenseY(p) << endl;
+  cout << "Weight Expected: 4.60e-53 vs " << p.weight << endl;
   exit(0);
 #endif
 
-
   h.onMessage(
-      [&pf,&map,&delta_t,&sensor_range,&sigma_pos,&sigma_landmark](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+      [&debugCounter,&pf,&map,&delta_t,&sensor_range,&sigma_pos,&sigma_landmark](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
         // "42" at the start of the message means there's a websocket message event.
         // The 4 signifies a websocket message
         // The 2 signifies a websocket event
@@ -162,10 +178,11 @@ int main()
               }
               cout << "highest w " << highest_weight << endl;
               cout << "average w " << weight_sum/num_particles << endl;
-//              if ((highest_weight == 1) && (weight_sum/num_particles == 1))
-//              {
-//                exit(0);
-//              }
+              debugCounter++;
+              if (debugCounter == 6 || ((highest_weight == 1) && (weight_sum/num_particles == 1)))
+              {
+                exit(0);
+              }
 
               json msgJson;
               msgJson["best_particle_x"] = best_particle.x;

@@ -21,6 +21,7 @@ struct Particle {
 	std::vector<int> associations;
 	std::vector<double> sense_x;
 	std::vector<double> sense_y;
+	std::vector<double> weight_calc;
 };
 
 
@@ -106,6 +107,7 @@ public:
 	std::string getAssociations(Particle best);
 	std::string getSenseX(Particle best);
 	std::string getSenseY(Particle best);
+	std::string getWeightCalculations(Particle best);
 
 	/**
 	* initialized Returns whether particle filter is initialized yet or not.

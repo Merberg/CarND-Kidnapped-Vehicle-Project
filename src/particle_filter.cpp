@@ -53,14 +53,12 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
   random_device seed;
   mt19937 gen(seed());
   double theta_d = delta_t * yaw_rate;
-  double vt = (fabs(yaw_rate) > 0.001) ? velocity / theta_d : 0;
+  double vt = (fabs(yaw_rate) > 0.001) ? velocity / yaw_rate : 0;
   normal_distribution<double> noise_x(0, std_pos[0]);
   normal_distribution<double> noise_y(0, std_pos[1]);
   normal_distribution<double> noise_theta(0, std_pos[2]);
 
   for (auto &particle : particles) {
-    cout << "*x:" << particle.x << "\t" << particle.y << "\t" << particle.theta
-         << endl;
     if (fabs(yaw_rate) > 0.001) {
       particle.x += vt * (sin(particle.theta + theta_d) - sin(particle.theta));
       particle.y += vt * (cos(particle.theta) - cos(particle.theta + theta_d));
@@ -71,10 +69,6 @@ void ParticleFilter::prediction(double delta_t, double std_pos[],
     particle.x += noise_x(gen);
     particle.y += noise_y(gen);
     particle.theta += theta_d + noise_theta(gen);
-
-    cout << " x:" << particle.x << "\t" << particle.y << "\t" << particle.theta
-         << endl;
-    cout << endl;
   }
 }
 
@@ -107,14 +101,21 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
   double sig_y = std_landmark[1];
   double sig_y_sqr = pow(sig_y, 2);
   double gauss_norm = (1 / (2 * PI * sig_x * sig_y));
+  vector<double> particle_weights;
 
   weights.clear();
-  for (auto &particle : particles) {
-    //Reset the weight
+  cout << observations.size() << " Observations" << endl;
+  for (int i = 0; i < num_particles; i++) {
+    auto &particle = particles[i];
+
+    //Reset the particle
+    cout << particle.id << "->" << i << endl;
+    particle.id = i;
     particle.weight = 1;
     particle.associations.clear();
     particle.sense_x.clear();
     particle.sense_y.clear();
+    particle.weight_calc.clear();
 
     for (auto &obsVehicle : observations) {
       LandmarkObs obsMap;
@@ -137,19 +138,20 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
         double exponent = pow((obsMap.x - mu_x), 2) / (2 * sig_x_sqr)
             + pow((obsMap.y - mu_y), 2) / (2 * sig_y_sqr);
         double weight = gauss_norm * exp(-exponent);
-        cout << obsVehicle.id << " weight:" << weight << endl;
         particle.weight *= weight;
 
         particle.associations.push_back(obsMap.id);
         particle.sense_x.push_back(obsMap.x);
         particle.sense_y.push_back(obsMap.y);
+        particle.weight_calc.push_back(weight);
       }
     }
-    cout << particle.id << " Associations:" << getAssociations(particle)
-         << " x:" << getSenseX(particle) << " y:" << getSenseY(particle)
-         << endl;
-    cout << "Final:" << particle.id << " Px:" << particle.x << "\tPy:"
-         << particle.y << "\tW:" << particle.weight << endl;
+    cout << " Px:" << particle.x << "\tPy:" << particle.y << "\tW:"
+         << particle.weight << endl;
+    cout << " IDs:\t" << getAssociations(particle) << endl;
+    cout << " x:\t" << getSenseX(particle) << endl;
+    cout << " y:\t" << getSenseY(particle) << endl;
+    cout << " w:\t" << getWeightCalculations(particle) << endl;
     cout << endl;
     weights.push_back(particle.weight);
   }
@@ -164,8 +166,6 @@ void ParticleFilter::resample()
   discrete_distribution<> d(weights.begin(), weights.end());
   for (int i = 0; i < num_particles; i++) {
     Particle p = particles[d(gen)];
-    cout << p.id << " Px:" << p.x << "\tPy:" << p.y << "\tW:" << p.weight
-         << endl;
     resampled.push_back(p);
   }
   particles = resampled;
@@ -207,6 +207,15 @@ string ParticleFilter::getSenseX(Particle best)
 string ParticleFilter::getSenseY(Particle best)
 {
   vector<double> v = best.sense_y;
+  stringstream ss;
+  copy(v.begin(), v.end(), ostream_iterator<float>(ss, " "));
+  string s = ss.str();
+  s = s.substr(0, s.length() - 1);  // get rid of the trailing space
+  return s;
+}
+string ParticleFilter::getWeightCalculations(Particle best)
+{
+  vector<double> v = best.weight_calc;
   stringstream ss;
   copy(v.begin(), v.end(), ostream_iterator<float>(ss, " "));
   string s = ss.str();
