@@ -44,7 +44,41 @@ int main()
   }
 
   // Create particle filter
-  ParticleFilter pf;
+  ParticleFilter pf(1);
+
+  // Testing of the updateWeights method
+#define UNIT_TEST_UPDATE_WEIGHTS
+#ifdef UNIT_TEST_UPDATE_WEIGHTS
+  Particle p;
+  p.id = 1;
+  p.x = 4;
+  p.y = 5;
+  p.theta = -2 * atan(1);;
+  p.weight = 1;
+  pf.particles.push_back(p);
+
+  double std_landmark[] = {.3,.3};
+  vector<LandmarkObs> observations;
+  observations.push_back({1,2,2});
+  observations.push_back({2,3,-2});
+  observations.push_back({3,0,-4});
+  Map map_landmarks;
+  map_landmarks.landmark_list.push_back({1,5,3});
+  map_landmarks.landmark_list.push_back({2,2,1});
+  map_landmarks.landmark_list.push_back({3,6,1});
+  map_landmarks.landmark_list.push_back({4,7,4});
+  map_landmarks.landmark_list.push_back({5,4,7});
+
+  pf.updateWeights(50,std_landmark,observations,map_landmarks);
+
+  p = pf.particles[0];
+  cout << "Associations Expected:1 2 2 or 5 vs Actual:" << pf.getAssociations(p) << endl;
+  cout << "Sense X Expected:6 2 0 vs Actual:" << pf.getSenseX(p) << endl;
+  cout << "Sense Y Expected:3 2 5 vs Actual:" << pf.getSenseY(p) << endl;
+  cout << "Weight Expected: 4.60e-53 vs Actual:" << p.weight << endl;
+  exit(0);
+#endif
+
 
   h.onMessage(
       [&pf,&map,&delta_t,&sensor_range,&sigma_pos,&sigma_landmark](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {

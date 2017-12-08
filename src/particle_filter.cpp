@@ -143,10 +143,11 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
         particle.associations.push_back(obsMap.id);
         particle.sense_x.push_back(obsMap.x);
         particle.sense_y.push_back(obsMap.y);
-      } else {
-        particle.weight *= WEIGHT_MIN;
       }
     }
+    cout << particle.id << " Associations:" << getAssociations(particle)
+         << " x:" << getSenseX(particle) << " y:" << getSenseY(particle)
+         << endl;
     cout << "Final:" << particle.id << " Px:" << particle.x << "\tPy:"
          << particle.y << "\tW:" << particle.weight << endl;
     cout << endl;

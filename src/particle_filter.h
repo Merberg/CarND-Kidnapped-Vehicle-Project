@@ -43,7 +43,7 @@ public:
 
 	// Constructor
 	// @param num_particles Number of particles
-	ParticleFilter() : num_particles(0), is_initialized(false) {}
+	ParticleFilter(int nParticles = 0) : num_particles(nParticles), is_initialized(false) {}
 
 	// Destructor
 	~ParticleFilter() {}
